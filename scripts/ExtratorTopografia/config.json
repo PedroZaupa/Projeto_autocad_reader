@@ -1,6 +1,7 @@
 {
   "pasta_dwg_entrada": "D:/Users/Pedro/Documentos/Projeto_autocad_reader/Projeto Urbanistico teste",
   "pasta_saida_dados": "D:/Users/Pedro/Documentos/Projeto_autocad_reader/data/dxfs",
-  "pasta_saida_final": "D:/Users/Pedro/Documentos/Projeto_autocad_reader/output",
-  "caminho_odafc": "D:/Users/Pedro/Documentos/Projeto_autocad_reader/programs/ODAfile/ODAFileConverter.exe"
+  "pasta_saida_final": "D:/Users/Pedro/Documentos/Projeto_autocad_reader/data",
+  "caminho_odafc": "D:/Users/Pedro/Documentos/Projeto_autocad_reader/programs/ODAfile/ODAFileConverter.exe",
+  "colunas_tabela": 6
 }
