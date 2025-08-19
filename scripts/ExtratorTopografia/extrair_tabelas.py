@@ -1,57 +1,106 @@
+# scripts/ExtratorTopografia/extrair_tabelas.py
+
 import os
 import logging
 import ezdxf
 import pandas as pd
+from collections import defaultdict
 
+# Configuração do logging para melhor visualização do processo
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
-def extrair_tabelas_dxf(dxf_path: str, pasta_saida: str):
+def extrair_tabelas_por_layer(dxf_path: str, pasta_saida: str, nome_layer: str = "Tabela"):
     """
-    Extrai todas as tabelas (layouts com nome 'tabela') de um DXF.
-    Mantém a ordem original das entidades e salva em Excel/CSV.
+    Extrai textos de um layer específico no modelspace, reconstrói a estrutura
+    da tabela baseando-se na posição dos textos e salva em Excel.
+
+    Args:
+        dxf_path (str): Caminho para o arquivo DXF.
+        pasta_saida (str): Pasta onde os resultados serão salvos.
+        nome_layer (str): Nome do layer que contém os dados da tabela.
     """
+    nome_base_arquivo = os.path.splitext(os.path.basename(dxf_path))[0]
+    logging.info(f"Iniciando extração de tabela do layer '{nome_layer}' para o arquivo: {nome_base_arquivo}.dxf")
+
     if not os.path.exists(dxf_path):
-        raise FileNotFoundError(f"Arquivo DXF não encontrado: {dxf_path}")
+        logging.error(f"Arquivo DXF não encontrado: {dxf_path}")
+        return
 
     try:
         doc = ezdxf.readfile(dxf_path)
+        msp = doc.modelspace()
     except Exception as e:
-        raise RuntimeError(f"Erro ao abrir DXF: {e}")
-
-    # 🔹 Vamos procurar por entidades MTEXT e TEXT dentro de layouts com 'tabela' no nome
-    tabelas_extraidas = []
-    for layout in doc.layouts:
-        if "tabela" in layout.name.lower():
-            logging.info(f"Extraindo tabela do layout: {layout.name}")
-            linhas = []
-            for entity in layout.query("TEXT MTEXT"):
-                try:
-                    texto = entity.plain_text() if entity.dxftype() == "MTEXT" else entity.dxf.text
-                    if texto.strip():
-                        linhas.append(texto.strip())
-                except Exception as e:
-                    logging.warning(f"Erro ao ler entidade em {layout.name}: {e}")
-
-            if linhas:
-                tabelas_extraidas.append((layout.name, linhas))
-
-    if not tabelas_extraidas:
-        logging.warning("Nenhuma tabela encontrada nos layouts.")
+        logging.error(f"Não foi possível ler o arquivo DXF: {e}")
         return
 
-    # Criar pasta de saída
-    pasta_tabelas = os.path.join(pasta_saida, "tabelas")
-    os.makedirs(pasta_tabelas, exist_ok=True)
+    # 1. Consulta eficiente para selecionar apenas textos (TEXT, MTEXT) no layer especificado
+    # A sintaxe '[layer=="{nome_layer}"]i' faz a busca ignorando maiúsculas/minúsculas
+    query = f'TEXT MTEXT[layer=="{nome_layer}"]i'
+    textos_tabela = msp.query(query)
 
-    # Salvar cada tabela encontrada
-    for idx, (nome_layout, linhas) in enumerate(tabelas_extraidas, start=1):
-        df = pd.DataFrame({"Linhas": linhas})
-        nome_base = f"tabela_{idx}_{nome_layout.replace(' ', '_')}"
-        caminho_csv = os.path.join(pasta_tabelas, f"{nome_base}.csv")
-        caminho_xlsx = os.path.join(pasta_tabelas, f"{nome_base}.xlsx")
+    if not textos_tabela:
+        logging.warning(f"Nenhum texto encontrado no layer '{nome_layer}'. Verifique o nome do layer no arquivo DWG.")
+        return
 
-        df.to_csv(caminho_csv, index=False, encoding="utf-8-sig")
-        df.to_excel(caminho_xlsx, index=False, engine="openpyxl")
-        logging.info(f"Tabela salva em: {caminho_csv} e {caminho_xlsx}")
+    logging.info(f"Encontrados {len(textos_tabela)} elementos de texto no layer '{nome_layer}'.")
 
-    logging.info("✅ Extração de tabelas concluída com sucesso!")
+    # 2. Agrupamento dos textos por linha (coordenada Y)
+    linhas_agrupadas = defaultdict(list)
+    tolerancia_y = 1.0  # Tolerância para agrupar textos que não estão perfeitamente alinhados
+
+    for entidade_texto in textos_tabela:
+        try:
+            texto = entidade_texto.plain_text() if entidade_texto.dxftype() == "MTEXT" else entidade_texto.dxf.text
+            ponto_insercao = entidade_texto.dxf.insert
+            
+            # Agrupa pela coordenada Y com tolerância
+            chave_y_agrupada = round(ponto_insercao.y / tolerancia_y) * tolerancia_y
+            
+            # Adiciona a coordenada X e o texto para ordenação posterior
+            linhas_agrupadas[chave_y_agrupada].append((ponto_insercao.x, texto.strip()))
+
+        except (AttributeError, ValueError) as e:
+            logging.warning(f"Ignorando uma entidade de texto com erro: {e}")
+
+    if not linhas_agrupadas:
+        logging.error("Falha ao agrupar os textos em linhas.")
+        return
+
+    # 3. Ordenação das linhas e colunas para montar a tabela
+    # Ordena as linhas de cima para baixo (Y decrescente)
+    chaves_y_ordenadas = sorted(linhas_agrupadas.keys(), reverse=True)
+
+    dados_finais_tabela = []
+    for y in chaves_y_ordenadas:
+        linha = linhas_agrupadas[y]
+        # Ordena as colunas da esquerda para a direita (X crescente)
+        linha_ordenada = sorted(linha, key=lambda item: item[0])
+        # Extrai apenas o texto já ordenado
+        texto_da_linha = [item[1] for item in linha_ordenada]
+        dados_finais_tabela.append(texto_da_linha)
+
+    # 4. Salvando os dados em um arquivo Excel
+    try:
+        df = pd.DataFrame(dados_finais_tabela)
+
+        # Opcional: Tenta usar a primeira linha como cabeçalho, se fizer sentido
+        if not df.empty and len(df.columns) > 1:
+            # Garante que os nomes das colunas sejam strings únicos
+            header = df.iloc[0]
+            df.columns = [str(h) for h in header]
+            df = df.iloc[1:].reset_index(drop=True)
+
+        # Cria a pasta de saída se ela não existir
+        pasta_tabelas_saida = os.path.join(pasta_saida, "tabelas_extraidas")
+        os.makedirs(pasta_tabelas_saida, exist_ok=True)
+        
+        caminho_saida_xlsx = os.path.join(pasta_tabelas_saida, f"{nome_base_arquivo}_layer_{nome_layer}.xlsx")
+        
+        df.to_excel(caminho_saida_xlsx, index=False)
+        logging.info(f"✅ Tabela extraída com sucesso e salva em: {caminho_saida_xlsx}")
+
+    except Exception as e:
+        logging.error(f"Erro ao salvar o arquivo Excel: {e}")
+
+# Para testar este script isoladamente, você precisaria de um arquivo de configuração
+# e um arquivo DXF. A execução principal continua sendo pelo `main.py`.
