@@ -49,10 +49,22 @@ def executar_fluxo():
             df_areas = processar_quadro_areas(dados_extraidos.get("quadro_areas", []))
             salvar_resultados(dados_extraidos, df_areas, nome_base, config["pasta_saida_final"])
 
-            # 3️⃣ Extrair tabelas topográficas do DXF
-            extrair_tabelas_por_layer(dxf_path, config["pasta_saida_final"]) 
-
-            logging.info(f"✅ Processamento de {nome_arquivo_dwg} concluído com sucesso!")
+            # 3️⃣ Extrair tabelas topográficas do DXF (CHAMADA CORRIGIDA)
+            extrair_tabelas_por_layer(
+                dxf_path, 
+                config["pasta_saida_final"],
+                # --- Parâmetros de Agrupamento Geral ---
+                dist_max=150.0,
+                
+                # --- Parâmetros para Divisão VERTICAL (Y) ---
+                tolerancia_y=2.5,
+                multiplicador_gap_y=4.0,
+                
+                # --- Parâmetros para Divisão HORIZONTAL (X) ---
+                tolerancia_x=10.0,
+                multiplicador_gap_x=5.0  # <<-- AJUSTE AQUI (aumentado de 2.0 para 5.0)
+            )
+            logging.info("Tabelas extraídas e salvas com sucesso.")
 
         except FileNotFoundError as e:
             logging.error(f"Erro de arquivo não encontrado para '{nome_arquivo_dwg}': {e}")
