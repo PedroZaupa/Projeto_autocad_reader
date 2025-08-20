@@ -6,7 +6,6 @@ from collections import defaultdict
 import math
 import numpy as np
 import json
-# Import absoluto a partir da raiz do pacote 'extrator'
 from extrator.utils import limpar_texto_autocad
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')

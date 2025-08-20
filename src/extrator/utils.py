@@ -4,23 +4,17 @@ import logging
 
 def carregar_config():
     """Carrega o arquivo de configuração config.json da raiz do projeto."""
-    # O caminho é relativo à pasta de trabalho atual
+    # O caminho é relativo à pasta de trabalho atual (a raiz do projeto)
     config_path = os.path.join(os.getcwd(), "config.json")
     if not os.path.exists(config_path):
-        raise FileNotFoundError(f"Arquivo de configuração não encontrado. Certifique-se de que 'config.json' está na pasta raiz do projeto e que você está executando o script a partir dela.")
+        raise FileNotFoundError(f"Arquivo 'config.json' não encontrado! Verifique se ele está na pasta raiz do projeto: '{os.getcwd()}'")
     with open(config_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 def limpar_texto_autocad(texto: str) -> str:
     """Traduz os códigos de controle de texto do AutoCAD para caracteres UTF-8."""
-    if texto is None:
-        return ""
-    # Mapeamento dos principais códigos de controle
-    codigos = {
-        "%%D": "°",  # Graus
-        "%%P": "±",  # Mais/Menos
-        "%%C": "ø"   # Diâmetro
-    }
+    if texto is None: return ""
+    codigos = {"%%D": "°", "%%P": "±", "%%C": "ø"}
     for codigo, simbolo in codigos.items():
         texto = texto.replace(codigo, simbolo)
     return texto

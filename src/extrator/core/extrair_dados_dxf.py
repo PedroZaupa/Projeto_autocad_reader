@@ -4,13 +4,11 @@ import json
 import logging
 import ezdxf
 import pandas as pd
-# Import absoluto a partir da raiz do pacote 'extrator'
 from extrator.utils import limpar_texto_autocad
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
 def coletar_linhas_texto(dxf_path):
-    """Coleta e limpa todas as entidades de texto do modelspace."""
     doc = ezdxf.readfile(dxf_path)
     msp = doc.modelspace()
     linhas = []
@@ -21,7 +19,6 @@ def coletar_linhas_texto(dxf_path):
     return linhas
 
 def extrair_campos(linhas):
-    """Extrai informações baseadas em padrões regex."""
     padroes = {
         "metadados": [r"LOTE", r"GLEBA", r"LONDRINA", r"PARANÁ", r"CNPJ", r"CPF", r"PROCESSO", r"ESCALA"],
         "geodesia": [r"DATUM", r"SIRGAS", r"UTM", r"LATITUDE", r"LONGITUDE", r"N\s*=", r"E\s*=", r"ALTITUDE"],
@@ -36,7 +33,6 @@ def extrair_campos(linhas):
     return dados
 
 def processar_quadro_areas(linhas_quadro):
-    """Processa especificamente as linhas do quadro de áreas para extrair valores."""
     dados = []
     regex_valor = re.compile(r"^(.*?)\s*[:.]*\s*([\d.,]+)\s*m²?$", re.IGNORECASE)
     for linha in linhas_quadro:
@@ -52,7 +48,6 @@ def processar_quadro_areas(linhas_quadro):
     return pd.DataFrame(dados)
 
 def salvar_resultados(dados, df_areas, base_nome, pasta_saida):
-    """Salva os dados extraídos em JSON e Excel."""
     os.makedirs(pasta_saida, exist_ok=True)
     caminho_json = os.path.join(pasta_saida, f"{base_nome}_resumo.json")
     with open(caminho_json, "w", encoding="utf-8") as f:
