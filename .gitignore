@@ -1,0 +1,60 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Dados privados / entradas locais
+data/
+
+# Saídas geradas
+output/
+outputs/
+imagens/
+*.log
+
+# Documentos e binários de cliente/projeto
+*.pdf
+*.docx
+*.xlsx
+*.xls
+*.csv
+*.dwg
+*.dxf
+*.dwl
+*.dwl2
+*.bmp
+*.png
+*.zip
+*.rar
+*.7z
+
+# Binários de programas externos (instalar via script, não versionar)
+programs/
+*.dll
+*.lib
+*.tx
+*.exe
+
+# Pastas de projeto/cliente
+Projeto Urbanistico teste/
+
+# Python / cache / venv
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

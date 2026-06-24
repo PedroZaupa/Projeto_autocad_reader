@@ -1,0 +1,7 @@
+{
+  "pasta_dwg_entrada": "data/_temp_dwg",
+  "pasta_saida_dados": "data/dxfs",
+  "pasta_saida_final": "output/",
+  "pasta_saida_json": "output/json",
+  "caminho_odafc": "programs/ODAfile/ODAFileConverter.exe"
+}
